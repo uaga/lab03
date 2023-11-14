@@ -1,48 +1,54 @@
-name: Python Package using Conda
-
-on: [push]
-
+name: Test CI CD
+on:
+  push:
+    branches:
+      - master
 jobs:
-  build-linux:
+  test-and-coverage-package:
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 5
+    env:
+      COVERAGE_HTML_REPORT_PATH: /tmp/coverage_html_report
+      COVERAGE_XML_REPORT_PATH: /tmp/coverage_xml_report.xml
+      PYTEST_REPORT_PATH: /tmp/pytest_report.html
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v3
+      - name: "Install python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+          architecture: 'x64'
+      - name: "Install project dependencies"
+        run: pip install -r requirements.txt
+      - name: "Run tests and code coverage analysis"
+        run: coverage run -m pytest --html=${{ env.PYTEST_REPORT_PATH }} --self-contained-html
+      - name: "Generate code coverage html report"
+        run: coverage html --directory ${{ env.COVERAGE_HTML_REPORT_PATH }}
+      - name: "Archive pytest and coverage reports"
+        uses: actions/upload-artifact@v3
+        if: ${{!cancelled()}}
+        with:
+          name: "Test and coverage reports"
+          path: |
+            ${{ env.PYTEST_REPORT_PATH }}
+            ${{ env.COVERAGE_HTML_REPORT_PATH }}
+      - name: "Generate code coverage xml report"
+        run: coverage xml -o ${{ env.COVERAGE_XML_REPORT_PATH }}
+      - name: "Push coverage xml report to codacy"
+        uses: codacy/codacy-coverage-reporter-action@v1
+        if: ${{!cancelled()}}
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_API_TOKEN }}
+          coverage-reports: ${{ env.COVERAGE_XML_REPORT_PATH }}
 
-    steps:        
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.10'
-    - name: Add conda to system path
-      run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        echo $CONDA/bin >> $GITHUB_PATH
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-    - name: Lint with flake8
-      run: |
-        conda install flake8
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test with pytest
-      run: |
-        pytest --html=report.html --self-contained-html -s .\tests.py
-        Coverage run .\tests.py pytest html=report.html
-        Coverage xml -o coverage.xml
-        python-codacy-coverage -t f7e326476748485987177acbae284e83
-               - name: Upload a Build Artifact
-    - uses: actions/checkout@v3
-      if: passed
-    - run: mkdir -p path/to/artifact
-    - run: echo hello > path/to/artifact/world.txt
-    - uses: actions/upload-artifact@v3
-      with:
-        name: my-artifact
-        path: path/to/artifact/world.txt
-          
-      
-        
+  publish-package-as-artifact:
+    needs: ["test-and-coverage-package"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v3
+      - name: "Publish package as artifact"
+        uses: actions/upload-artifact@v3
+        with:
+          name: "Built package"
+          path: "src"
