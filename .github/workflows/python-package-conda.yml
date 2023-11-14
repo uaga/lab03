@@ -8,17 +8,7 @@ jobs:
     strategy:
       max-parallel: 5
 
-    steps:
-    - uses: actions/upload-artifact@v3
-    - run: mkdir -p path/to/artifact
-
-    - run: echo hello > path/to/artifact/world.txt
-
-    - uses: actions/upload-artifact@v3
-      with:
-        name: my-artifact
-        path: path/to/artifact/world.txt
-        
+    steps:        
     - uses: actions/checkout@v3
     - name: Set up Python 3.10
       uses: actions/setup-python@v3
@@ -44,6 +34,15 @@ jobs:
         Coverage run .\tests.py pytest html=report.html
         Coverage xml -o coverage.xml
         python-codacy-coverage -t f7e326476748485987177acbae284e83
-   
+               - name: Upload a Build Artifact
+    - uses: actions/checkout@v3
+      if: passed
+    - run: mkdir -p path/to/artifact
+    - run: echo hello > path/to/artifact/world.txt
+    - uses: actions/upload-artifact@v3
+      with:
+        name: my-artifact
+        path: path/to/artifact/world.txt
+          
       
         
