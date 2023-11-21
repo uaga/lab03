@@ -21,6 +21,6 @@ jobs:
     
     - name: Run tests 
       # run: pytest --html=report.html --self-contained-html -s tests.py  
-      run: Coverage run .\tests.py pytest html=report.html
+      run: coverage run .\tests.py pytest html=report.html
 
     # - name: 
