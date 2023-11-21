@@ -18,8 +18,12 @@ jobs:
       run: 
         pip install -r requirements.txt
     
-    - name: Run tests 
+    - name: Run tests and create html report file
       # run: pytest --html=report.html --self-contained-html -s tests.py  
-      run: coverage run .\tests.py pytest html=report.html
+      run: coverage run tests.py pytest html=report.html
 
-    # - name: 
+    - name: Convert html to xml report file
+      run: Coverage xml -o coverage.xml  
+
+    - name: Upload codacy xml report
+      run: -t ${{ secrets.CODACY_PROJECT_API_TOKEN }}  
