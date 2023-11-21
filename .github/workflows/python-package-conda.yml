@@ -23,7 +23,7 @@ jobs:
       run: coverage run tests.py pytest html=report.html
 
     - name: Convert html to xml report file
-      run: Coverage xml -o coverage.xml  
+      run: coverage xml -o coverage.xml  
 
     - name: Upload codacy xml report
-      run: -t ${{ secrets.CODACY_PROJECT_API_TOKEN }}  
+      run: python-codacy-coverage -t ${{ secrets.CODACY_PROJECT_API_TOKEN }}  
