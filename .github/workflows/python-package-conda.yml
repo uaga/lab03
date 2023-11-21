@@ -6,6 +6,11 @@ jobs:
   testing-package:
     runs-on: ubuntu-latest
 
+    env:
+      COVERAGE_HTML_REPORT_PATH: /tmp/coverage_html_report
+      COVERAGE_XML_REPORT_PATH: /tmp/coverage_xml_report.xml
+      PYTEST_REPORT_PATH: /tmp/pytest_report.html
+    
     steps:
     - uses: actions/checkout@v3
     
@@ -20,10 +25,41 @@ jobs:
     
     - name: Run tests and create html report file
       # run: pytest --html=report.html --self-contained-html -s tests.py  
-      run: coverage run tests.py pytest html=report.html
-
+      run: coverage run tests.py pytest html=${{ env.PYTEST_REPORT_PATH }}
+    
+    - name: Gen coverage html report
+      run: coverage html --directory ${{ env.COVERAGE_HTML_REPORT_PATH }}
+    
     - name: Convert html to xml report file
-      run: coverage xml -o coverage.xml  
+      run: coverage xml -o coverage.xml
 
-    - name: Upload codacy xml report
-      run: python-codacy-coverage -t ${{ secrets.CODACY_PROJECT_API_TOKEN }}  
+    - name: Archive reports
+      uses: actions/upload-artifact@v3
+      if: ${{!cancelled()}}
+      with:
+         name: test and coverage reports
+         path: |
+           ${{ env.PYTEST_REPORT_PATH }}
+           ${{ env.COVERAGE_HTML_REPORT_PATH }}
+           
+    - name: Gen code coverage xml report
+      run: coverage xml -o ${{ env.COVERAGE_XML_REPORT_PATH }}
+      
+    - name: Push coverage xml report to codacy
+      uses: codacy/codacy-coverage-reporter-action@v1
+      if: ${{!cancelled()}}
+      with:
+         project-token: ${{ secrets.CODACY_PROJECT_API_TOKEN }}
+         coverage-reports: ${{ env.COVERAGE_XML_REPORT_PATH }}
+  
+  publish-package-as-artifact:
+    needs: ["testing-package"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v3
+      - name: "Publish package as artifact"
+        uses: actions/upload-artifact@v3
+        with:
+          name: "Built package"
+          path: "src"
